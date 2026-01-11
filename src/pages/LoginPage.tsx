@@ -8,12 +8,20 @@ export default function LoginPage() {
   const [error, setError] = React.useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setBusy(true); setError(null)
+  e.preventDefault()
+  setBusy(true)
+  setError(null)
+
+  try {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setError(error.message)
+  } catch (err: any) {
+    setError(err?.message ?? String(err))
+  } finally {
     setBusy(false)
   }
+}
+
 
   return (
     <div className="container">
