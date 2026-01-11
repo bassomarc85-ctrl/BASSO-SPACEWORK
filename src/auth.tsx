@@ -1,6 +1,13 @@
 import React from 'react'
 import { supabase } from './supabase'
 import type { Profile, Role } from './types'
+function withTimeout<T>(p: Promise<T>, ms = 10000): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Timeout conectando con Supabase')), ms))
+  ]);
+}
+
 
 type AuthState = {
   loading: boolean
@@ -58,12 +65,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     let mounted = true
     ;(async () => {
-      try { await refresh() } catch (e) { console.error(e) } finally { if (mounted) setLoading(false) }
-    })()
-    const { data: sub } = supabase.auth.onAuthStateChange(async () => {
-      setLoading(true)
-      try { await refresh() } finally { if (mounted) setLoading(false) }
-    })
+      try {
+  await withTimeout(refresh(), 10000);
+} catch (e) {
+  console.error(e);
+  // fuerza cierre de sesión si se queda en un estado raro
+  try { await supabase.auth.signOut(); } catch {}
+} finally {
+  if (mounted) setLoading(false);
+}
     return () => { mounted = false; sub.subscription.unsubscribe() }
   }, [refresh])
 
